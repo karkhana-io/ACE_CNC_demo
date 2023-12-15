@@ -1,6 +1,4 @@
 import streamlit as st
-import tempfile
-import os
 from utility import *
 
 
@@ -26,61 +24,58 @@ def main():
     # Process the inputs (add your own logic here)
     if uploaded_file is not None:
         
-        # Extract the file extension from the uploaded file
-        _, file_extension = os.path.splitext(uploaded_file.name)
+        file_content = uploaded_file.getvalue()
 
-        # Save the uploaded file to a temporary file with the same extension
-        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            file_path = tmp_file.name
+        # Prepare the file in the correct format for uploading
+        file_path = {'file': (uploaded_file.name, file_content)}
 
         response = get_cad_feature_extracted(cad_extractor_url, file_path)
         
-
+        indicator = False
         if response.status_code == 200:
             response = response.json()
             if response['status'] == 'green':
                 st.info("Outlined below are the extracted feature of the CAD.", icon="ℹ️")
                 for item_feat in response['data']:
                     st.dataframe(item_feat['features'])
+                    indicator = True
             elif response['status'] == 'red':
                 st.write(response)
+        elif response.status_code != 200:
+            st.info("there is some issue with the Costing API.", icon="ℹ️")
 
-        # delete the temporary file!
-        os.remove(file_path)
-        # Create two columns for the inputs
-        col1, col2 = st.columns(2)
+        if indicator:
+            # Create two columns for the inputs
+            col1, col2 = st.columns(2)
 
-        with col1:
-            material_grade_input = st.selectbox("Material Grade", options=material_grade.keys())
-            surface_finish_input = st.selectbox("Surface Finish", options=surface_finish.keys())
-            
-        with col2:
-            quantity = st.number_input("Quantity", value=1, min_value=1)
-            tolerance = st.selectbox("Tolerance", options=tolerance.keys(), index=0)
+            with col1:
+                material_grade_input = st.selectbox("Material Grade", options=material_grade.keys())
+                surface_finish_input = st.selectbox("Surface Finish", options=surface_finish.keys())
+                
+            with col2:
+                quantity = st.number_input("Quantity", value=1, min_value=1)
+                tolerance = st.selectbox("Tolerance", options=tolerance.keys(), index=0)
 
-        tolerance_options = {"ISO 2768 - Medium": 1, "ISO 2768 - Fine": 0}
-        user_input = {
-                    'tolarance' : tolerance_options[tolerance] ,
-                    'quantity' : quantity,
-                    'surface_finish' : surface_finish[surface_finish_input],
-                    'material_grade': material_grade[material_grade_input]
-                }
-
-        if st.button("Get the Instant Quote"):
-            
-            ml_input ={
-                        "user_input" : user_input,
-                        "cad_data": response['data'] 
+            tolerance_options = {"ISO 2768 - Medium": 1, "ISO 2768 - Fine": 0}
+            user_input = {
+                        'tolarance' : tolerance_options[tolerance] ,
+                        'quantity' : quantity,
+                        'surface_finish' : surface_finish[surface_finish_input],
+                        'material_grade': material_grade[material_grade_input]
                     }
-            print("/n")
-            print(ml_input)
-            print("/n")
-            costing_response = get_cnc_costing(costing_url, ml_input)
-            out_put = costing_response.json()['data']
-            # st.write(out_put["costing_results"])
-            CostSummaryDisplay(out_put["costing_results"]).display()
-            get_possible_operations(out_put["ml_output"]["operations"])
+
+            if st.button("Get the Instant Quote"):
+                
+                ml_input ={
+                            "user_input" : user_input,
+                            "cad_data": response['data'] 
+                        }
+
+                costing_response = get_cnc_costing(costing_url, ml_input)
+                out_put = costing_response.json()['data']
+                # st.write(out_put["costing_results"])
+                CostSummaryDisplay(out_put["costing_results"]).display()
+                get_possible_operations(out_put["ml_output"]["operations"])
         
 
 if __name__ == "__main__":
