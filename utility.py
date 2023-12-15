@@ -39,7 +39,7 @@ def get_cad_feature_extracted(url, file_path, operation='milling'):
     
     payload = {'operation': operation}
     files = [
-        ('cad_file', (file_path.split("\\")[-1], open(file_path, 'rb'), 'application/octet-stream'))
+        ('cad_file', (file_path['file'][0],file_path['file'][1], 'application/octet-stream'))
     ]
     headers = {}
 
