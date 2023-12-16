@@ -42,9 +42,9 @@ def main():
             elif response['status'] == 'red':
                 st.write(response)
         elif response.status_code != 200:
-            st.info("there is some issue with the Costing API.", icon="ℹ️")
+            st.info(f"CAD Extrcator API Response: {response.status_code}", icon="ℹ️")
 
-        if indicator:
+        if indicator and len(response['data'])==1:
             # Create two columns for the inputs
             col1, col2 = st.columns(2)
 
@@ -76,6 +76,9 @@ def main():
                 # st.write(out_put["costing_results"])
                 CostSummaryDisplay(out_put["costing_results"]).display()
                 get_possible_operations(out_put["ml_output"]["operations"])
+
+        elif indicator and len(response['data'])>1:
+            st.info("The CAD file you provided is Assembly file", icon="ℹ️")
         
 
 if __name__ == "__main__":
